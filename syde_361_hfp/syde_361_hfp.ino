@@ -1,4 +1,5 @@
 
+#include <MIDI.h>
 
 // See https://www.pjrc.com/teensy/td_midi.html for more MIDI commands you can use
 // Use a program like https://www.snoize.com/MIDIMonitor/ to monitor your MIDI communication
@@ -29,7 +30,12 @@ const int PiezzoPin8 = 18;
 const int PiezzoPin9 = 22;
 const int PiezzoPin10 = 21;
 
-const int select_button = 6;
+const int select_button = 7;
+
+const int pitchNob = 20;
+
+
+const int resetButton = 6;
 
 const int led_1 = 2;
 const int led_2 = 3;
@@ -59,6 +65,9 @@ int Piezzo10IsOn = 0;
 int curr_led = 2;
 
 int lastButtonState = 0;
+int lastResetState = 0;
+int knobZero = 0;
+int bend = 0;
 
 const int debounceValue = 100;
 
@@ -69,14 +78,12 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(select_button, INPUT);
+  pinMode(resetButton, INPUT);
   pinMode(curr_led, OUTPUT);
   pinMode(curr_led + 1, OUTPUT);
   pinMode(curr_led + 2, OUTPUT);
   pinMode(curr_led + 3, OUTPUT);
   digitalWrite(curr_led, HIGH);
-  digitalWrite(curr_led + 1, HIGH);
-  digitalWrite(curr_led + 2, HIGH);
-  digitalWrite(curr_led + 3, HIGH);
 }
 
 void loop() {
@@ -90,6 +97,7 @@ void loop() {
   int FSR8Reading = analogRead(FSR8Pin); //key 8 dampen
   int FSR9Reading = analogRead(FSR9Pin); //key 9 dampen
   int FSR10Reading = analogRead(FSR10Pin); //key 10 dampen
+  
   int Piezzo1Reading = analogRead(PiezzoPin1); //key 1
   int Piezzo2Reading = analogRead(PiezzoPin2); //key 2
   int Piezzo3Reading = analogRead(PiezzoPin3); //key 3
@@ -100,13 +108,27 @@ void loop() {
   int Piezzo8Reading = analogRead(PiezzoPin8); //key 8
   int Piezzo9Reading = analogRead(PiezzoPin9); //key 9
   int Piezzo10Reading = analogRead(PiezzoPin10); //key 10
+  
   int select_button_reading = digitalRead(select_button);
-  Serial.println(select_button_reading);
+
+  int pitchNobReading = analogRead(pitchNob);
+  int resetButtonReading = digitalRead(resetButton);
+  
+    Serial.print("pitchNob ");
+    Serial.println(pitchNobReading);
 //  Serial.print("FSR6Pin: ");
 //  Serial.println(FSR6Reading);
 //  Serial.print("FSR3Pin: ");
 //  Serial.println(Piezzo8Reading);
- 
+  bend = -2*knobZero + 2*pitchNobReading;
+  usbMIDI.sendPitchBend(bend,channel);
+
+  if (resetButtonReading == HIGH && lastResetState == 0)
+  {
+    knobZero = pitchNobReading;
+    usbMIDI.sendPitchBend(0,channel);
+  }
+  
   if (select_button_reading == HIGH && lastButtonState == 0)
   {
     digitalWrite(curr_led, 0);
